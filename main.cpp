@@ -1,7 +1,10 @@
-#include "hausdorff_lower_bound.h"
-#include "icp_single_iteration.h"
-#include "random_points_on_mesh.h"
-#include "point_mesh_distance.h"
+// #include "hausdorff_lower_bound.h"
+#include "geodesic_remesh.h"
+
+// #include "icp_single_iteration.h"
+// #include "random_points_on_mesh.h"
+// #include "point_mesh_distance.h"
+
 #include <igl/read_triangle_mesh.h>
 #include <igl/opengl/glfw/Viewer.h>
 #include <Eigen/Core>
@@ -10,120 +13,79 @@
 
 int main(int argc, char *argv[])
 {
-  // Load input meshes
-  Eigen::MatrixXd OVX,VX,VY;
-  Eigen::MatrixXi FX,FY;
-  igl::read_triangle_mesh(
-    (argc>1?argv[1]:"../data/max-registration-partial.obj"),OVX,FX);
-  igl::read_triangle_mesh(
-    (argc>2?argv[2]:"../data/max-registration-complete.obj"),VY,FY);
+  // predefined colors
+  const Eigen::RowVector3d orange(1.0, 0.7, 0.2);
+  const Eigen::RowVector3d blue(0.2, 0.3, 0.8);
 
-  int num_samples = 100;
-  bool show_samples = true;
-  ICPMethod method = ICP_METHOD_POINT_TO_POINT;
+  // Load input meshes
+  Eigen::MatrixXd OVX,VX;
+  Eigen::MatrixXi FX;
+  igl::read_triangle_mesh(
+      (argc > 1 ? argv[1] : "../data/pelvis-registration-complete.obj"), OVX, FX); // partial: max-registration-partial
+  // igl::read_triangle_mesh(
+  //   (argc>2?argv[2]:"../data/pelvis-registration-complete.obj"),VY,FY);
+
+
+
+  // int num_samples = 100;
+  // bool show_samples = true;
+  // ICPMethod method = ICP_METHOD_POINT_TO_POINT;
 
   igl::opengl::glfw::Viewer viewer;
   const int xid = viewer.selected_data_index;
   viewer.append_mesh();
   const int yid = viewer.selected_data_index;
+  // find the path
+  Eigen::VectorXd path;
+  find_path(OVX, FX, 1, 12, path); // from vertex 1 to vertex 12
+  // viewer.data_list[yid].set_vertices(path);
+  viewer.data_list[yid].set_points(path, (1. - (1. - blue.array()) * .8));
 
   std::cout<<R"(
-  [space]  toggle animation
-  H,h      print lower bound on directed Hausdorff distance from X to Y
-  M,m      toggle between point-to-point and point-to-plane methods
-  P,p      show sample points
-  R,r      reset, also recomputes a random sampling and closest points
-  S        double number of samples
-  s        halve number of samples
-)";
+    [space]  toggle animation)";
 
-  // predefined colors
-  const Eigen::RowVector3d orange(1.0,0.7,0.2);
-  const Eigen::RowVector3d blue(0.2,0.3,0.8);
-  const auto & set_points = [&]()
+  const auto &single_iteration = [&]()
   {
-    if(show_samples)
+    Eigen::MatrixXi F_intrinsic;
+    Eigen::MatrixXd l_intrinsic;
+    int i = 1;
+    geodesic_remesh(VX, FX, i, F_intrinsic, l_intrinsic);
+
+    // convert intrinsic edge length to vertices
+    Eigen::MatrixXd lout2 = Eigen::MatrixXd::Zero(VX.rows(), 3);
+    for (int i = 0; i < F_intrinsic.rows(); i++)
     {
-      Eigen::MatrixXd X,P;
-      random_points_on_mesh(num_samples,VX,FX,X);
-      viewer.data_list[xid].set_points(X,(1.-(1.-orange.array())*.8));
-      Eigen::VectorXd D;
-      Eigen::MatrixXd N;
-      point_mesh_distance(X,VY,FY,D,P,N);
-      viewer.data_list[yid].set_points(P,(1.-(1.-blue.array())*.4));
-      Eigen::MatrixXi E(X.rows(),2);
-      E.col(0) = Eigen::VectorXi::LinSpaced(X.rows(),0,X.rows()-1);
-      E.col(1) = Eigen::VectorXi::LinSpaced(X.rows(),X.rows(),2*X.rows()-1);
-      Eigen::MatrixXd XP(X.rows()+P.rows(),3);
-      XP<<X,P;
-      viewer.data_list[xid].set_edges(XP,E,Eigen::RowVector3d(0.3,0.3,0.3));
-    }else
-    {
-      viewer.data_list[xid].clear_points();
-      viewer.data_list[xid].clear_edges();
-      viewer.data_list[yid].clear_points();
+      for (int j = 0; j < 3; j++)
+      {
+        lout2.row(F_intrinsic(i, j)) += l_intrinsic.row(i);
+      }
     }
+
+    // show intrinsic mesh in viewer
+    // viewer.data_list[xid].set_mesh(VX, F_intrinsic);
+    viewer.data_list[xid].set_vertices(lout2);
+    viewer.data_list[xid].set_points(lout2, (1. - (1. - orange.array()) * .8));
+    // viewer.data_list[xid].set_edges(VX, F_intrinsic, Eigen::RowVector3d(0.3, 0.3, 0.3));
+    // viewer.data_list[xid].set_colors(l_intrinsic);
+    viewer.data_list[xid].compute_normals();
+    // set_points();
   };
+
   const auto & reset = [&]()
   {
     VX = OVX;
     viewer.data_list[xid].set_vertices(VX);
     viewer.data_list[xid].compute_normals();
-    set_points();
+    // set_points();
   };
-  viewer.callback_pre_draw = [&](igl::opengl::glfw::Viewer &)->bool
-  {
-    if(viewer.core().is_animating)
-    {
-      ////////////////////////////////////////////////////////////////////////
-      // Perform single iteration of ICP method
-      ////////////////////////////////////////////////////////////////////////
-      Eigen::Matrix3d R;
-      Eigen::RowVector3d t;
-      icp_single_iteration(VX,FX,VY,FY,num_samples,method,R,t);
-      // Apply transformation to source mesh
-      VX = ((VX*R).rowwise() + t).eval();
-      viewer.data_list[xid].set_vertices(VX);
-      viewer.data_list[xid].compute_normals();
-      set_points();
-    }
-    return false;
-  };
+
   viewer.callback_key_pressed = 
     [&](igl::opengl::glfw::Viewer &,unsigned char key,int)->bool
   {
     switch(key)
     {
       case ' ':
-        viewer.core().is_animating ^= 1;
-        break;
-      case 'H':
-      case 'h':
-        std::cout<<"D_{H}(X -> Y) >= "<<
-          hausdorff_lower_bound(VX,FX,VY,FY,num_samples)<<std::endl;
-        break;
-      case 'M':
-      case 'm':
-        method = (ICPMethod)((((int)method)+1)%((int)NUM_ICP_METHODS));
-        std::cout<< "point-to-"<<
-          (method==ICP_METHOD_POINT_TO_PLANE?"plane":"point")<<std::endl;
-        break;
-      case 'P':
-      case 'p':
-        show_samples ^= 1;
-        set_points();
-        break;
-      case 'R':
-      case 'r':
-        reset();
-        break;
-      case 'S':
-        num_samples = (num_samples-1)*2;
-        set_points();
-        break;
-      case 's':
-        num_samples = (num_samples/2)+1;
-        set_points();
+        single_iteration();
         break;
       default:
         return false;
@@ -133,8 +95,8 @@ int main(int argc, char *argv[])
 
   viewer.data_list[xid].set_mesh(OVX,FX);
   viewer.data_list[xid].set_colors(orange);
-  viewer.data_list[yid].set_mesh(VY,FY);
-  viewer.data_list[yid].set_colors(blue);
+  // viewer.data_list[yid].set_mesh(VY,FY);
+  // viewer.data_list[yid].set_colors(blue);
   reset();
   viewer.core().is_animating = false;
   viewer.data().point_size = 10;
