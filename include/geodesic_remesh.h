@@ -14,9 +14,10 @@ void geodesic_remesh(
     const Eigen::MatrixXi &F,
     const Eigen::VectorXi &P,
     Eigen::MatrixXd &Vout,
-    Eigen::MatrixXi &Fout);
+    Eigen::MatrixXi &Fout,
+    Eigen::VectorXi &flipPathIndex);
 
-void find_inner_trangles(
+void find_inner_triangles(
     const Eigen::MatrixXd &V,
     const Eigen::MatrixXi &F,
     const int a,
@@ -24,16 +25,25 @@ void find_inner_trangles(
     const int c,
     Eigen::MatrixXi &T);
 
-void flip_inner_trangles(
+bool flip_inner_triangles(
     const Eigen::MatrixXd &V,
-    const Eigen::MatrixXi &T,
+    const int s,
+    const int m,
+    const int t,
+    Eigen::MatrixXi &T,
     Eigen::VectorXi &flipP);
 
+
+// helper function
 double get_angle(
     const Eigen::MatrixXd &V,
     const int a,
     const int b,
     const int c);
+
+void removeRow(
+    Eigen::MatrixXi &matrix,
+    unsigned int rowToRemove);
 
 // void find_path(
 //     const Eigen::MatrixXd &V,

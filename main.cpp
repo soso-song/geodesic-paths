@@ -156,7 +156,23 @@ int main(int argc, char *argv[])
 
       // Eigen::MatrixXi FY;
       // Eigen::MatrixXd VY;
-      geodesic_remesh(VX, FX, PathIndex, VY, FY);
+      Eigen::VectorXi flipPathIndex;
+      geodesic_remesh(VX, FX, PathIndex, VY, FY, flipPathIndex);
+      // draw edges in flipPathIndex
+      
+      // print flipPathIndex
+      std::cout << "flipPathIndexSize: " << flipPathIndex.size() << std::endl;
+      std::cout << "flipPathIndex: " << flipPathIndex << std::endl;
+      if(flipPathIndex.size() > 1){
+        for(int i = 0; i < flipPathIndex.rows()-1; i++){
+          viewer.data_list[yid].add_edges(
+            VX.row(flipPathIndex(i)), 
+            VX.row(flipPathIndex(i + 1)), 
+            blue
+          );
+        }
+      }
+
 
       // convert intrinsic edge length to vertices
       // Eigen::MatrixXd lout2 = Eigen::MatrixXd::Zero(VX.rows(), 3);
