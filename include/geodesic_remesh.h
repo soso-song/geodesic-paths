@@ -10,16 +10,43 @@
 //   Fout  #Fin by 3 list of output triangle indices
 //   lout  #Fin by 3 list of output "half-edge lengths"
 void geodesic_remesh(
-    const Eigen::MatrixXd & V,
-    const Eigen::MatrixXi & Fin,
-    const int i,
-    Eigen::MatrixXi & Fout,
-    Eigen::MatrixXd & lout);
-
-void find_path(
     const Eigen::MatrixXd &V,
     const Eigen::MatrixXi &F,
-    const int i,
-    const int j,
-    Eigen::VectorXd &P);
+    const Eigen::VectorXi &P,
+    Eigen::MatrixXd &Vout,
+    Eigen::MatrixXi &Fout);
+
+void find_inner_trangles(
+    const Eigen::MatrixXd &V,
+    const Eigen::MatrixXi &F,
+    const int a,
+    const int b,
+    const int c,
+    Eigen::MatrixXi &T);
+
+void flip_inner_trangles(
+    const Eigen::MatrixXd &V,
+    const Eigen::MatrixXi &T,
+    Eigen::VectorXi &flipP);
+
+double get_angle(
+    const Eigen::MatrixXd &V,
+    const int a,
+    const int b,
+    const int c);
+
+// void find_path(
+//     const Eigen::MatrixXd &V,
+//     const Eigen::MatrixXi &F,
+//     const int i,
+//     const int j,
+//     Eigen::MatrixXd &P);
+
+// void igl_exact_geodesic_example(
+//     const Eigen::MatrixXd &V,
+//     const Eigen::MatrixXi &F,
+//     const int i,
+//     const int j,
+//     Eigen::VectorXd &P);
+
 #endif
