@@ -32,7 +32,8 @@ int main(int argc, char *argv[])
   Eigen::MatrixXi FX, FY;
   Eigen::VectorXi PathIndex;
   igl::read_triangle_mesh(
-      (argc > 1 ? argv[1] : "../data/pelvis-registration-complete.obj"), VX, FX); // partial: max-registration-partial
+      (argc > 1 ? argv[1] : "../data/newbone.obj"), VX, FX); // partial: max-registration-partial
+      // (argc > 1 ? argv[1] : "../data/pelvis-registration-complete.obj"), VX, FX); // partial: max-registration-partial
   // igl::read_triangle_mesh(
   //   (argc>2?argv[2]:"../data/pelvis-registration-complete.obj"),VY,FY);
 
@@ -41,9 +42,9 @@ int main(int argc, char *argv[])
   // ICPMethod method = ICP_METHOD_POINT_TO_POINT;
 
   igl::opengl::glfw::Viewer viewer;
-  const int xid = viewer.selected_data_index;
+  // const int xid = viewer.selected_data_index;
   viewer.append_mesh();
-  const int yid = viewer.selected_data_index;
+  // const int yid = viewer.selected_data_index;
 
   // find the path
   // Eigen::MatrixXd path;
@@ -65,7 +66,7 @@ int main(int argc, char *argv[])
   {
     if (s.placing_handles)
     {
-      viewer.data_list[xid].set_points(s.CV, blue);
+      viewer.data().set_points(s.CV, blue);
       // set new color for the path
 
       // draw a edge between the last two points
@@ -74,10 +75,10 @@ int main(int argc, char *argv[])
       //   Eigen::MatrixXd edges(2, 3);
       //   edges.row(0) = s.CV.row(s.CV.rows() - 2);
       //   edges.row(1) = s.CV.row(s.CV.rows() - 1);
-      //   viewer.data_list[xid].add_edges(edges.row(0), edges.row(1), blue);
+      //   viewer.data().add_edges(edges.row(0), edges.row(1), blue);
       //   // Eigen::MatrixXi EV = Eigen::MatrixXi::Zero(1, 2);
       //   // EV.row(0) << 0, 1;
-      //   // viewer.data_list[xid].set_edges(edges, EV, blue);
+      //   // viewer.data().set_edges(edges, EV, blue);
       // }
 
     }
@@ -130,9 +131,9 @@ int main(int argc, char *argv[])
   const auto &single_iteration = [&]()
   {
     // print s.CV
-    std::cout << "Path: " << s.CV << std::endl; 
-    // print PathIndex
-    std::cout << "PathIndex: " << PathIndex << std::endl;
+    // std::cout << "Path: " << s.CV << std::endl; 
+    // // print PathIndex
+    // std::cout << "PathIndex: " << PathIndex << std::endl;
 
     // // shift x value of s.CV by 1
     // Eigen::MatrixXd CV_shifted = s.CV;
@@ -148,7 +149,7 @@ int main(int argc, char *argv[])
       {
         EV.row(i) << i, i + 1;
       }
-      viewer.data_list[xid].set_edges(s.CV, EV, green);
+      viewer.data().set_edges(s.CV, EV, green);
     }
 
     if (s.placing_handles != true){
@@ -157,21 +158,33 @@ int main(int argc, char *argv[])
       // Eigen::MatrixXi FY;
       // Eigen::MatrixXd VY;
       Eigen::VectorXi flipPathIndex;
-      geodesic_remesh(VX, FX, PathIndex, VY, FY, flipPathIndex);
-      // draw edges in flipPathIndex
-      
-      // print flipPathIndex
-      std::cout << "flipPathIndexSize: " << flipPathIndex.size() << std::endl;
-      std::cout << "flipPathIndex: " << flipPathIndex << std::endl;
-      if(flipPathIndex.size() > 1){
-        for(int i = 0; i < flipPathIndex.rows()-1; i++){
-          viewer.data_list[yid].add_edges(
-            VX.row(flipPathIndex(i)), 
-            VX.row(flipPathIndex(i + 1)), 
-            blue
-          );
-        }
+      // create matrix with 2 columns
+      Eigen::MatrixXi process_path;
+      geodesic_remesh(VX, FX, PathIndex, VY, FY, flipPathIndex, process_path);
+
+      // draw process_path
+      // std::cout << "flipPathIndexSize: " << process_path.size() << std::endl;
+      // std::cout << "process_path: " << process_path << std::endl;
+      for(int i = 0; i < process_path.rows(); i++){
+        viewer.data().add_edges(
+          VX.row(process_path(i, 0)),
+          VX.row(process_path(i, 1)),
+          blue
+        );
       }
+      viewer.data().set_mesh(VX, FX);
+      // draw flipPathIndex
+      // std::cout << "flipPathIndexSize: " << flipPathIndex.size() << std::endl;
+      // std::cout << "flipPathIndex: " << flipPathIndex << std::endl;
+      // if(flipPathIndex.size() > 1){
+      //   for(int i = 0; i < flipPathIndex.rows()-1; i++){
+      //     viewer.data_list[yid].add_edges(
+      //       VX.row(flipPathIndex(i)), 
+      //       VX.row(flipPathIndex(i + 1)), 
+      //       blue
+      //     );
+      //   }
+      // }
 
 
       // convert intrinsic edge length to vertices
@@ -184,14 +197,14 @@ int main(int argc, char *argv[])
       //   }
       // }
       // show intrinsic mesh in viewer
-      // viewer.data_list[xid].set_mesh(VX, FY);
+      // viewer.data().set_mesh(VX, FY);
 
       // viewer.data_list[yid].set_vertices(lout2);
       // viewer.data_list[yid].set_points(lout2, (1. - (1. - orange.array()) * .8));
 
-      // viewer.data_list[xid].set_edges(VX, FY, Eigen::RowVector3d(0.3, 0.3, 0.3));
-      // viewer.data_list[xid].set_colors(VY);
-      viewer.data_list[yid].compute_normals();
+      // viewer.data().set_edges(VX, FY, Eigen::RowVector3d(0.3, 0.3, 0.3));
+      // viewer.data().set_colors(VY);
+      // viewer.data_list[yid].compute_normals();
       // set_points();
     }
     s.placing_handles = false;
@@ -211,19 +224,20 @@ int main(int argc, char *argv[])
     return true;
   };
 
-  viewer.data_list[xid].set_mesh(VX, FX);
-  viewer.data_list[xid].set_colors(orange);
-  viewer.data_list[xid].point_size = 10;
+  viewer.data().set_mesh(VX, FX);
+  viewer.data().set_colors(orange);
+  viewer.data().point_size = 10;
+  viewer.data().show_vertex_labels = true;
 
   // VX = VX;
-  VY = VX;
-  FY = FX;
+  // VY = VX;
+  // FY = FX;
 
   // Eigen::MatrixXd EmpV;
   // Eigen::MatrixXi EmpF;
   
-  viewer.data_list[yid].set_mesh(VY, FY);
-  viewer.data_list[yid].set_colors(green);
+  // viewer.data_list[yid].set_mesh(VY, FY);
+  // viewer.data_list[yid].set_colors(green);
   // viewer.data_list[yid].line_width = 90;
   // viewer.data().point_size = 10;
 

@@ -6,11 +6,12 @@
 
 void geodesic_remesh(
     const Eigen::MatrixXd &V,
-    const Eigen::MatrixXi &F,
+    Eigen::MatrixXi &F,
     const Eigen::VectorXi &P,
     Eigen::MatrixXd &Vout,
     Eigen::MatrixXi &Fout,
-    Eigen::VectorXi &flipPathIndex)
+    Eigen::VectorXi &flipPathIndex,
+    Eigen::MatrixXi &process_path)
 {
   // convert to intrinsic mesh
   // Eigen::MatrixXd l;
@@ -29,27 +30,28 @@ void geodesic_remesh(
     int c = P(i+1);
 
     // calculate angle between a-b-c based on normal of b
-
-
     // std::cout << "angle: " << angle << std::endl;
 
     Eigen::MatrixXi T;
-    find_inner_triangles(V, F, a, b, c, T);
+    bool is_tb = find_inner_triangles(V, F, a, b, c, T);
     //print triangles T
-    std::cout << "T: " << T << std::endl;
+    // std::cout << "T: " << T << std::endl;
 
-    flip_inner_triangles(V, a, b, c, T, flipPathIndex);
+    flip_inner_triangles(V, F, a, b, c, is_tb, T, flipPathIndex, process_path);
   }
 }
 
 // "inner" means assume triangles are on the "smaller side" of a-b-c
 bool flip_inner_triangles(
     const Eigen::MatrixXd &V,
+    Eigen::MatrixXi &F,
     const int s,
     const int m,
     const int t,
+    const bool is_tb,
     Eigen::MatrixXi &T,
-    Eigen::VectorXi &flipP)
+    Eigen::VectorXi &flipP,
+    Eigen::MatrixXi &process_path)
 {
   // check if there is more than 1 triangle
   if (T.rows() < 2){
@@ -59,43 +61,93 @@ bool flip_inner_triangles(
   flipP.conservativeResize(flipP.rows() + 1);
   flipP(flipP.rows() - 1) = s;
 
-  int T_index = 0;
+  int index = 0;
   const int compare_amount = T.rows() - 1;
   for (int i = 0; i < compare_amount; i++){ // compare each pair of triangles (|T|-1 times)
     // check first opposite_angle
-    int a = T(T_index, 0);
-    int b = T(T_index, 1);
-    int c = T(T_index, 2);
-    int x = T(T_index+1, 0);
-    int y = T(T_index+1, 1);
-    int z = T(T_index+1, 2); 
-    // need identify which the angle is which side
-    // double opposite_angle = get_angle(V, b, y, z);
-    // if (opposite_angle < M_PI){
-    //   T_index += 1;
-    //   continue;
-    // }
-    flipP.conservativeResize(flipP.rows() + 1);
-    flipP(flipP.rows() - 1) = z;
+    int a = T(index, 0);
+    int b = T(index, 1);
+    int c = T(index, 2);
+    int x = T(index + 1, 0);
+    int y = T(index + 1, 1);
+    int z = T(index + 1, 2);
+
     // print i
     std::cout << "i: " << i << std::endl;
     // print abcxyz
     std::cout << "abcxyz: " << a << " " << b << " " << c << " " << x << " " << y << " " << z << std::endl;
-    // print T
-    std::cout << "T: " << T << std::endl;
-    // print flipP
-    std::cout << "flipP: " << flipP << std::endl;
+    // // print T
+    // std::cout << "T: " << T << std::endl;
+    // // print flipP
+    // std::cout << "flipP: " << flipP << std::endl;
 
-    // remove trangele a-b-c in T so current change can affect next iteration
-    T(T_index, 2) = z;
-    removeRow(T, T_index + 1);
+    if(is_tb){
+      double opposite_angle = get_angle(V, a, b, c) + get_angle(V, x, z, y);
+      // print opposite_angle
+      std::cout << "opposite_angle b: " << opposite_angle << std::endl;
+      if (opposite_angle > M_PI){
+        index += 1;
+        continue;
+      }
 
+      // flipP.conservativeResize(flipP.rows() + 1);
+      // flipP(flipP.rows() - 1) = z;
+
+      T(index, 1) = y;
+      removeRow(T, index + 1);
+
+      process_path.conservativeResize(process_path.rows() + 1, 2);
+      process_path(process_path.rows() - 1, 0) = c;
+      process_path(process_path.rows() - 1, 1) = y;
+
+      flip_edge(a, y, b, c, F);
+    }else{
+      double opposite_angle = get_angle(V, a, c, b) + get_angle(V, x, y, z);
+      std::cout << "opposite_angle a: " << opposite_angle << std::endl;
+      if (opposite_angle > M_PI){
+        index += 1;
+        continue;
+      }
+
+      // flipP.conservativeResize(flipP.rows() + 1);
+      // flipP(flipP.rows() - 1) = z;
+
+      T(index, 2) = z;
+      removeRow(T, index + 1);
+
+      process_path.conservativeResize(process_path.rows() + 1, 2);
+      process_path(process_path.rows() - 1, 0) = b;
+      process_path(process_path.rows() - 1, 1) = z;
+
+      flip_edge(a,b,c,z,F);
+    }
     // break; // only flip once
   }
   return true;
 }
 
-void find_inner_triangles(
+bool flip_edge(
+    const int a,
+    const int b,
+    const int c,
+    const int d,
+    Eigen::MatrixXi &F)
+{
+  // remove edge ac, add edge db
+
+  // add trangle adc and bcd to F
+  Eigen::MatrixXi newF(2, 3);
+  newF << a, b, d,
+          b, c, d;
+  F.conservativeResize(F.rows() + 2, 3);
+  F.block(F.rows() - 2, 0, 2, 3) = newF;
+
+  // remove abc and bad
+  removeRow(F, get_triangle_index(F, a, c, d));
+  removeRow(F, get_triangle_index(F, a, b, c));
+}
+
+bool find_inner_triangles(
     const Eigen::MatrixXd &V,
     const Eigen::MatrixXi &F,
     const int a,
@@ -188,10 +240,17 @@ void find_inner_triangles(
   if (angle_A < angle_B)
   {
     T = T_A;
+    return false;
   }
   else
   {
     T = T_B;
+    // reverse the row order of T_B in T
+    for (int i = 0; i < T.rows() / 2; i++)
+    {
+      T.row(i).swap(T.row(T.rows() - 1 - i));
+    }
+    return true;
   }
 }
 
@@ -220,6 +279,38 @@ void removeRow(
     matrix.block(rowToRemove, 0, numRows - rowToRemove, numCols) = matrix.bottomRows(numRows - rowToRemove);
 
   matrix.conservativeResize(numRows, numCols);
+}
+
+int get_triangle_index(
+    const Eigen::MatrixXi &F,
+    const int a,
+    const int b,
+    const int c)
+{
+  int index = -1;
+  // remove face a-b-c from F
+  for (int i = 0; i < F.rows(); i++)
+  {
+    int x = F(i, 0);
+    int y = F(i, 1);
+    int z = F(i, 2);
+    if (a == x && b == y && c == z)
+    {
+      index = i;
+      break;
+    }
+    else if (a == y && b == z && c == x)
+    {
+      index = i;
+      break;
+    }
+    else if (a == z && b == x && c == y)
+    {
+      index = i;
+      break;
+    }
+  }
+  return index;
 }
 
 // void remove_face(

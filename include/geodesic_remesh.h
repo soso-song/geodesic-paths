@@ -11,13 +11,14 @@
 //   lout  #Fin by 3 list of output "half-edge lengths"
 void geodesic_remesh(
     const Eigen::MatrixXd &V,
-    const Eigen::MatrixXi &F,
+    Eigen::MatrixXi &F,
     const Eigen::VectorXi &P,
     Eigen::MatrixXd &Vout,
     Eigen::MatrixXi &Fout,
-    Eigen::VectorXi &flipPathIndex);
+    Eigen::VectorXi &flipPathIndex,
+    Eigen::MatrixXi &process_path);
 
-void find_inner_triangles(
+bool find_inner_triangles(
     const Eigen::MatrixXd &V,
     const Eigen::MatrixXi &F,
     const int a,
@@ -27,16 +28,31 @@ void find_inner_triangles(
 
 bool flip_inner_triangles(
     const Eigen::MatrixXd &V,
+    Eigen::MatrixXi &F,
     const int s,
     const int m,
     const int t,
+    const bool is_tb,
     Eigen::MatrixXi &T,
-    Eigen::VectorXi &flipP);
+    Eigen::VectorXi &flipP,
+    Eigen::MatrixXi &process_path);
 
+    // helper function
+    double get_angle(
+        const Eigen::MatrixXd &V,
+        const int a,
+        const int b,
+        const int c);
 
-// helper function
-double get_angle(
-    const Eigen::MatrixXd &V,
+bool flip_edge(
+    const int a,
+    const int b,
+    const int c,
+    const int d,
+    Eigen::MatrixXi &F);
+
+int get_triangle_index(
+    const Eigen::MatrixXi &F,
     const int a,
     const int b,
     const int c);
