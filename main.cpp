@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 
   viewer.data().set_mesh(VX, FX);
   viewer.data().set_colors(orange);
-  viewer.data().point_size = 10;
+  // viewer.data().point_size = 10;
   viewer.data().show_vertex_labels = true;
 
   // VX = VX;
