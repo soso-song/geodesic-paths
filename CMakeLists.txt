@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(registration)
+project(geodesicpath)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 ### libIGL options: choose between header only and compiled static library
@@ -19,5 +19,5 @@ endif()
 add_library(core ${SRCFILES})
 target_link_libraries(core igl::core igl::glfw )
 
-add_executable(registration "main.cpp")
-target_link_libraries(registration core igl::core igl::opengl igl::glfw )
+add_executable(geodesicpath "main.cpp")
+target_link_libraries(geodesicpath core igl::core igl::opengl igl::glfw )

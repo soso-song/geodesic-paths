@@ -32,10 +32,7 @@ int main(int argc, char *argv[])
   Eigen::MatrixXi FX, FY;
   Eigen::VectorXi PathIndex;
   igl::read_triangle_mesh(
-      (argc > 1 ? argv[1] : "../data/newbone.obj"), VX, FX); // partial: max-registration-partial
-      // (argc > 1 ? argv[1] : "../data/pelvis-registration-complete.obj"), VX, FX); // partial: max-registration-partial
-  // igl::read_triangle_mesh(
-  //   (argc>2?argv[2]:"../data/pelvis-registration-complete.obj"),VY,FY);
+      (argc > 1 ? argv[1] : "../data/newbone.obj"), VX, FX);
 
   // int num_samples = 100;
   // bool show_samples = true;
@@ -165,13 +162,15 @@ int main(int argc, char *argv[])
       // draw process_path
       // std::cout << "flipPathIndexSize: " << process_path.size() << std::endl;
       // std::cout << "process_path: " << process_path << std::endl;
-      for(int i = 0; i < process_path.rows(); i++){
-        viewer.data().add_edges(
-          VX.row(process_path(i, 0)),
-          VX.row(process_path(i, 1)),
-          blue
-        );
-      }
+
+      // for(int i = 0; i < process_path.rows(); i++){
+      //   viewer.data().add_edges(
+      //     VX.row(process_path(i, 0)),
+      //     VX.row(process_path(i, 1)),
+      //     blue
+      //   );
+      // }
+      
       viewer.data().set_mesh(VX, FX);
       // draw flipPathIndex
       // std::cout << "flipPathIndexSize: " << flipPathIndex.size() << std::endl;
