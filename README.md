@@ -1,4 +1,5 @@
 # geodesic-paths
+
 This libigl-style paper implementation provides a "FlipOut" method to find the geodesic paths in triangle meshes using [Eigen](https://eigen.tuxfamily.org/) and [libigl](https://libigl.github.io/)'s built-in solvers.
 
 > Reference paper: [You Can Find Geodesic Paths in Triangle Meshes by Just Flipping Edges](https://www.cs.cmu.edu/~kmcrane/Projects/FlipOut/FlipOut.pdf), by NICHOLAS SHARP and KEENAN CRANE, Carnegie Mellon University
@@ -63,6 +64,8 @@ Therefore, there are two sets of instructions for editing the F variable for the
 
 
 ## Setup & Demo
+
+> Video Demo: https://youtu.be/w9CnAymZSc4
 
 Build routine:
 
